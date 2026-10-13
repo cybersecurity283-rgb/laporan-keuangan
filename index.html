@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Laporan Keuangan Digital</title>
+    <!-- Tailwind CSS untuk Desain Responsif & Modern -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js untuk Data Statistik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS untuk Export Excel Otomatis -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen">
+
+    <!-- 1. HALAMAN LOGIN -->
+    <div id="loginPage" class="flex items-center justify-center min-h-screen px-4">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+            <div class="text-center mb-6">
+                <h2 class="text-3xl font-extrabold text-blue-600 mb-2">FinanceTracker</h2>
+                <p class="text-gray-500">Silakan login untuk mengelola laporan tugas kelompok Anda.</p>
+            </div>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+                    <input type="text" id="username" required placeholder="Masukkan username (contoh: tugas)" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" required placeholder="Masukkan password" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
+                </div>
+                <div id="loginError" class="text-red-500 text-sm hidden">Username atau password salah! (Gunakan: admin/admin)</div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition duration-200 shadow-md">Masuk ke Dashboard</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. HALAMAN UTAMA / DASHBOARD (HIDDEN SECARA DEFAULT) -->
+    <div id="dashboardPage" class="hidden min-h-screen flex flex-col">
+        <!-- Navbar -->
+        <nav class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl font-black text-blue-600">FinanceTracker</span>
+                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Kelompok Tugas</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="userDisplay" class="text-sm font-medium text-gray-700">Halo, User</span>
+                <button id="logoutBtn" class="text-sm bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl font-semibold transition">Keluar</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- KOLOM KIRI: Form Input & Target -->
+            <div class="space-y-6 lg:col-span-1">
+                <!-- Card Input Data -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">✨ Tambah Transaksi Harian</h3>
+                    <form id="transactionForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-600 mb-1">Tanggal</label>
+                            <input type="date" id="txDate" required class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-600 mb-1">Jenis Transaksi</label>
+                            <select id="txType" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500">
+                                <option value="pemasukan">📈 Pemasukan</option>
+                                <option value="pengeluaran">📉 Pengeluaran</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-600 mb-1">Keterangan / Kategori</label>
+                            <input type="text" id="txDesc" required placeholder="Contoh: Iuran anggota, Beli kertas jilid" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-600 mb-1">Jumlah (Rp)</label>
+                            <input type="number" id="txAmount" required placeholder="Contoh: 50000" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl transition shadow">Simpan Transaksi</button>
+                    </form>
+                </div>
+
+                <!-- Card Pengaturan Target -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">🎯 Target & Capaian Tabungan</h3>
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-600 mb-1">Atur Target Saldo Akhir (Rp)</label>
+                        <div class="flex space-x-2">
+                            <input type="number" id="targetInput" value="1000000" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500">
+                            <button id="updateTargetBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium transition">Set</button>
+                        </div>
+                    </div>
+                    <!-- Progress Bar Capaian -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm font-medium">
+                            <span class="text-gray-500">Persentase Target Tercapai:</span>
+                            <span id="targetPercent" class="text-blue-600 font-bold">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                            <div id="targetBar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">*Dihitung dari total akumulasi saldo (Pemasukan - Pengeluaran) dibandingkan nilai target.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KOLOM KANAN: Statistik, Tabel, & Export Excel -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Ringkasan Finansial Quick Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl">
+                        <span class="text-xs uppercase font-bold text-emerald-600 tracking-wider">Total Pemasukan</span>
+                        <div id="totalPemasukan" class="text-xl font-extrabold text-emerald-800 mt-1">Rp 0</div>
+                    </div>
+                    <div class="bg-rose-50 border border-rose-200 p-5 rounded-2xl">
+                        <span class="text-xs uppercase font-bold text-rose-600 tracking-wider">Total Pengeluaran</span>
+                        <div id="totalPengeluaran" class="text-xl font-extrabold text-rose-800 mt-1">Rp 0</div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 p-5 rounded-2xl">
+                        <span class="text-xs uppercase font-bold text-blue-600 tracking-wider">Saldo Saat Ini</span>
+                        <div id="saldoAkhir" class="text-xl font-extrabold text-blue-800 mt-1">Rp 0</div>
+                    </div>
+                </div>
+
+                <!-- Grafik Statistik 30 Hari -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">📊 Statistik Tren Keuangan (30 Hari Terakhir)</h3>
+                        <span class="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-500 font-medium">Grafik Real-time</span>
+                    </div>
+                    <div class="relative w-full h-64">
+                        <canvas id="financeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabel Riwayat Transaksi & Tombol Export -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">📑 Riwayat Transaksi Kelompok</h3>
+                        <button id="exportExcelBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold transition flex items-center shadow-md space-x-2">
+                            <span>📥 Unduh Laporan format Excel (.xlsx)</span>
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto border border-gray-200 rounded-xl max-h-60 overflow-y-auto">
+                        <table class="w-full text-left border-collapse" id="transactionTable">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    <th class="px-6 py-3">Tanggal</th>
+                                    <th class="px-6 py-3">Jenis</th>
+                                    <th class="px-6 py-3">Keterangan</th>
+                                    <th class="px-6 py-3 text-right">Jumlah</th>
+                                    <th class="px-6 py-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-gray-100 text-sm">
+                                <!-- Data akan dimasukkan lewat Javascript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JAVASCRIPT PROGRAM LOGIC -->
+    <script>
+        // Set Default Tanggal Hari Ini pada Input Form
+        document.getElementById('txDate').valueAsDate = new Date();
+
+        // Database Akun Demo Sederhana untuk Keperluan Tugas
+        const usersDatabase = {
+            'admin': 'admin',
+            'tugas': '12345',
+            'kelompok': 'keuangan'
+        };
+
+        // State Aplikasi (Menggunakan LocalStorage agar data tersimpan meskipun halaman direfresh/ditutup)
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        let financialTarget = parseFloat(localStorage.getItem('financialTarget')) || 1000000;
+        let currentUser = localStorage.getItem('currentUser') || null;
+        let chartInstance = null;
+
+        // Element DOM Ref
+        const loginPage = document.getElementById('loginPage');
+        const dashboardPage = document.getElementById('dashboardPage');
+        const loginForm = document.getElementById('loginForm');
+        const loginError = document.getElementById('loginError');
+        const userDisplay = document.getElementById('userDisplay');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const transactionForm = document.getElementById('transactionForm');
+        const tableBody = document.getElementById('tableBody');
+        const targetInput = document.getElementById('targetInput');
+        const updateTargetBtn = document.getElementById('updateTargetBtn');
+        const exportExcelBtn = document.getElementById('exportExcelBtn');
+
+        // --- SISTEM LOGIN ---
+        function checkAuth() {
+            if (currentUser) {
+                loginPage.classList.add('hidden');
+                dashboardPage.classList.remove('hidden');
+                userDisplay.innerText = "Halo, " + currentUser;
+                targetInput.value = financialTarget;
+                updateDashboard();
+            } else {
+                loginPage.classList.remove('hidden');
+                dashboardPage.classList.add('hidden');
+            }
+        }
+
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const userIn = document.getElementById('username').value.trim();
+            const passIn = document.getElementById('password').value;
+
+            if (usersDatabase[userIn] && usersDatabase[userIn] === passIn) {
+                currentUser = userIn;
+                localStorage.setItem('currentUser', currentUser);
+                loginError.classList.add('hidden');
+                loginForm.reset();
+                checkAuth();
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        logoutBtn.addEventListener('click', function() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            checkAuth();
+        });
+
+        // --- MANAJEMEN TRANSAKSI & PERHITUNGAN ---
+        transactionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const date = document.getElementById('txDate').value;
+            const type = document.getElementById('txType').value;
+            const desc = document.getElementById('txDesc').value.trim();
+            const amount = parseFloat(document.getElementById('txAmount').value);
+
+            const newTx = {
+                id: Date.now(),
+                date: date,
+                type: type,
+                desc: desc,
+                amount: amount,
+                user: currentUser
+            };
+
+            transactions.push(newTx);
+            saveData();
+            updateDashboard();
+            
+            // Reset input text & nominal saja, tanggal tetap
+            document.getElementById('txDesc').value = '';
+            document.getElementById('txAmount').value = '';
+        });
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveData();
+            updateDashboard();
+        }
+
+        function saveData() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+        }
+
+        updateTargetBtn.addEventListener('click', function() {
+            const val = parseFloat(targetInput.value);
+            if (!isNaN(val) && val >= 0) {
+                financialTarget = val;
+                localStorage.setItem('financialTarget', financialTarget);
+                updateDashboard();
+                alert('Target finansial baru berhasil diperbarui!');
+            }
+        });
+
+        // Format angka ke format mata uang Rupiah
+        function formatRupiah(angka) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+        }
+
+        // --- UPDATE TAMPILAN DASHBOARD ---
+        function updateDashboard() {
+            let totalIn = 0;
+            let totalOut = 0;
+            tableBody.innerHTML = '';
+
+            // Urutkan transaksi berdasarkan tanggal terbaru
+            const sortedTx = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sortedTx.forEach(tx => {
+                if (tx.type === 'pemasukan') totalIn += tx.amount;
+                if (tx.type === 'pengeluaran') totalOut += tx.amount;
+
+                // Render ke tabel
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition";
+                tr.innerHTML = `
+                    <td class="px-6 py-3 whitespace-nowrap text-gray-600">${tx.date}</td>
+                    <td class="px-6 py-3 whitespace-nowrap">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${tx.type === 'pemasukan' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                            ${tx.type === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-3 text-gray-700 font-medium">${tx.desc} <span class="text-xs text-gray-400 font-normal">(${tx.user || 'user'})</span></td>
+                    <td class="px-6 py-3 text-right font-bold ${tx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-600'}">${tx.type === 'pemasukan' ? '+' : '-'} ${formatRupiah(tx.amount)}</td>
+                    <td class="px-6 py-3 text-center">
+                        <button onclick="deleteTransaction(${tx.id})" class="text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline transition">Hapus</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            const currentSaldo = totalIn - totalOut;
+
+            // Set text di quick cards
+            document.getElementById('totalPemasukan').innerText = formatRupiah(totalIn);
+            document.getElementById('totalPengeluaran').innerText = formatRupiah(totalOut);
+            document.getElementById('saldoAkhir').innerText = formatRupiah(currentSaldo);
+
+            // Hitung Target Progress
+            let pct = 0;
+            if (financialTarget > 0) {
+                pct = Math.max(0, Math.min(100, Math.round((currentSaldo / financialTarget) * 100)));
+            }
+            document.getElementById('targetPercent').innerText = pct + '%';
+            document.getElementById('targetBar').style.width = pct + '%';
+
+            // Update grafik statistik 30 hari
+            renderChart();
+        }
+
+        // --- PROSES OLAH DATA & STATISTIK 30 HARI ---
+        function renderChart() {
+            // Dapatkan list 30 tanggal terakhir ke belakang dari hari ini
+            const labels = [];
+            const dataPemasukanArr = [];
+            const dataPengeluaranArr = [];
+
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0]; // Format YYYY-MM-DD
+                labels.push(dateStr);
+
+                // Hitung total pemasukan/pengeluaran di tanggal ini
+                let dayIn = 0;
+                let dayOut = 0;
+                transactions.forEach(t => {
+                    if (t.date === dateStr) {
+                        if (t.type === 'pemasukan') dayIn += t.amount;
+                        if (t.type === 'pengeluaran') dayOut += t.amount;
+                    }
+                });
+                dataPemasukanArr.push(dayIn);
+                dataPengeluaranArr.push(dayOut);
+            }
+
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Pemasukan (Rp)',
+                            data: dataPemasukanArr,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.2,
+                            fill: true
+                        },
+                        {
+                            label: 'Pengeluaran (Rp)',
+                            data: dataPengeluaranArr,
+                            borderColor: '#f43f5e',
+                            backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.2,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 7 } },
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // --- MULTI-SHEET EXCEL AUTOMATION (SheetJS) ---
+        exportExcelBtn.addEventListener('click', function() {
+            if (transactions.length === 0) {
+                alert('Belum ada data transaksi yang dimasukkan untuk di-export.');
+                return;
+            }
+
+            // 1. Data Transaksi Umum (Pemasukan & Pengeluaran)
+            const rawDataJson = transactions.map((t, idx) => ({
+                "No": idx + 1,
+                "Tanggal Transaksi": t.date,
+                "Jenis": t.type.toUpperCase(),
+                "Keterangan / Kategori": t.desc,
+                "Nominal (Rp)": t.amount,
+                "Petugas Input": t.user || "admin"
+            }));
+            const wsGeneral = XLSX.utils.json_to_sheet(rawDataJson);
+
+            // 2. Data Statistik 30 Hari Terakhir
+            const statDataJson = [];
+            let totalIn30 = 0;
+            let totalOut30 = 0;
+
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+
+                let dayIn = 0;
+                let dayOut = 0;
+                transactions.forEach(t => {
+                    if (t.date === dateStr) {
+                        if (t.type === 'pemasukan') dayIn += t.amount;
+                        if (t.type === 'pengeluaran') dayOut += t.amount;
+                    }
+                });
+                totalIn30 += dayIn;
+                totalOut30 += dayOut;
+
+                statDataJson.push({
+                    "Hari / Tanggal": dateStr,
+                    "Pemasukan Harian (Rp)": dayIn,
+                    "Pengeluaran Harian (Rp)": dayOut,
+                    "Net Arus Kas Harian (Rp)": dayIn - dayOut
+                });
+            }
+            const wsStats = XLSX.utils.json_to_sheet(statDataJson);
+
+            // 3. Data Target Finansial Kelompok & Capaian
+            let sumIn = 0, sumOut = 0;
+            transactions.forEach(t => {
+                if (t.type === 'pemasukan') sumIn += t.amount;
+                if (t.type === 'pengeluaran') sumOut += t.amount;
+            });
+            const currentBalance = sumIn - sumOut;
+            let pctTercapai = financialTarget > 0 ? (currentBalance / financialTarget) * 100 : 0;
+            
+            const targetDataJson = [
+                {
+                    "Indikator Finansial": "Target Akumulasi Tabungan Kelompok",
+                    "Nilai (Rupiah / Persen)": financialTarget
+                },
+                {
+                    "Indikator Finansial": "Total Pemasukan Kumulatif",
+                    "Nilai (Rupiah / Persen)": sumIn
+                },
+                {
+                    "Indikator Finansial": "Total Pengeluaran Kumulatif",
+                    "Nilai (Rupiah / Persen)": sumOut
+                },
+                {
+                    "Indikator Finansial": "Saldo Kas Berjalan Saat Ini",
+                    "Nilai (Rupiah / Persen)": currentBalance
+                },
+                {
+                    "Indikator Finansial": "Status Persentase Capaian Target (%)",
+                    "Nilai (Rupiah / Persen)": pctTercapai.toFixed(2) + " %"
+                },
+                {
+                    "Indikator Finansial": "Sisa Kekurangan Dana",
+                    "Nilai (Rupiah / Persen)": currentBalance >= financialTarget ? 0 : financialTarget - currentBalance
+                }
+            ];
+            const wsTarget = XLSX.utils.json_to_sheet(targetDataJson);
+
+            // Membuat Workbook Excel Baru
+            const wb = XLSX.utils.book_new();
+            
+            // Memasukkan masing-masing data ke sheet terpisah sesuai permintaan instruksi
+            XLSX.utils.book_append_sheet(wb, wsGeneral, "Rekap Transaksi");
+            XLSX.utils.book_append_sheet(wb, wsStats, "Statistik 30 Hari");
+            XLSX.utils.book_append_sheet(wb, wsTarget, "Target & Capaian");
+
+            // Unduh file excel langsung dari browser secara otomatis
+            XLSX.writeFile(wb, "Laporan_Keuangan_Tugas_Kelompok.xlsx");
+        });
+
+        // Jalankan Autentikasi Saat Program Dimuat Pertama Kali
+        checkAuth();
+    </script>
+</body>
+</html>
